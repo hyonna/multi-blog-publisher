@@ -1,7 +1,10 @@
 import axios from 'axios'
 import { Post } from '../store'
 
-const VELOG_GQL = 'https://v2.velog.io/graphql'
+const ENDPOINTS = [
+  'https://v3.velog.io/graphql',
+  'https://v2.velog.io/graphql',
+]
 
 const WRITE_POST = `
   mutation WritePost($input: WritePostInput!) {
@@ -13,20 +16,25 @@ const WRITE_POST = `
   }
 `
 
-const UPDATE_POST = `
-  mutation EditPost($id: ID!, $input: EditPostInput!) {
-    editPost(id: $id, input: $input) {
-      id
-      url_slug
-      user { username }
-    }
-  }
-`
+function makeSlug(title: string): string {
+  const base = title
+    .toLowerCase()
+    .replace(/[^\w가-힣\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 80)
+  return `${base}-${Date.now().toString(36)}`
+}
 
-function getHeaders(accessToken: string) {
+function makeHeaders(accessToken: string) {
   return {
     'Content-Type': 'application/json',
-    Cookie: `access_token=${accessToken}; refresh_token=${accessToken}`
+    // Velog는 user_access_token 쿠키를 사용
+    Cookie: `user_access_token=${accessToken}`,
+    // Bearer 방식도 함께 전달 (v3 대응)
+    Authorization: `Bearer ${accessToken}`,
+    Origin: 'https://velog.io',
+    Referer: 'https://velog.io/',
   }
 }
 
@@ -34,65 +42,44 @@ export async function publishToVelog(
   post: Post,
   accessToken: string
 ): Promise<{ id: string; url: string }> {
-  const res = await axios.post(
-    VELOG_GQL,
-    {
-      query: WRITE_POST,
-      variables: {
-        input: {
-          title: post.title,
-          body: post.content,
-          tags: post.tags,
-          is_markdown: true,
-          is_temp: false,
-          is_private: false
-        }
+  const input = {
+    title: post.title,
+    body: post.content,
+    tags: post.tags,
+    is_markdown: true,
+    is_temp: false,
+    is_private: false,
+    url_slug: makeSlug(post.title),
+  }
+
+  let lastError: Error = new Error('Velog API 연결 실패')
+
+  for (const endpoint of ENDPOINTS) {
+    try {
+      const res = await axios.post(
+        endpoint,
+        { query: WRITE_POST, variables: { input } },
+        { headers: makeHeaders(accessToken) }
+      )
+
+      if (res.data.errors?.length) {
+        throw new Error(res.data.errors[0].message)
       }
-    },
-    { headers: getHeaders(accessToken) }
-  )
 
-  if (res.data.errors) {
-    throw new Error(res.data.errors[0].message)
-  }
+      const wp = res.data.data?.writePost
+      if (!wp) throw new Error('응답에서 writePost 데이터를 찾을 수 없습니다.')
 
-  const wp = res.data.data.writePost
-  return {
-    id: wp.id,
-    url: `https://velog.io/@${wp.user.username}/${wp.url_slug}`
-  }
-}
-
-export async function updateVelogPost(
-  post: Post,
-  accessToken: string,
-  velogId: string
-): Promise<{ id: string; url: string }> {
-  const res = await axios.post(
-    VELOG_GQL,
-    {
-      query: UPDATE_POST,
-      variables: {
-        id: velogId,
-        input: {
-          title: post.title,
-          body: post.content,
-          tags: post.tags,
-          is_markdown: true,
-          is_private: false
-        }
+      return {
+        id: wp.id,
+        url: `https://velog.io/@${wp.user.username}/${wp.url_slug}`,
       }
-    },
-    { headers: getHeaders(accessToken) }
-  )
-
-  if (res.data.errors) {
-    throw new Error(res.data.errors[0].message)
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+      // 400/401이면 다음 엔드포인트 시도, 그 외는 즉시 throw
+      const status = axios.isAxiosError(err) ? err.response?.status : null
+      if (status && status !== 400 && status !== 401) throw lastError
+    }
   }
 
-  const ep = res.data.data.editPost
-  return {
-    id: ep.id,
-    url: `https://velog.io/@${ep.user.username}/${ep.url_slug}`
-  }
+  throw lastError
 }
