@@ -170,14 +170,20 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
               </p>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">벨로그 사용자명</label>
-                <input
-                  type="text"
-                  value={form.velog.username}
-                  onChange={(e) => setForm((f) => ({ ...f, velog: { ...f.velog, username: e.target.value } }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="velog.io/@username"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  사용자명
+                  <span className="text-xs font-normal text-gray-400 ml-1">(표시용, 발행에 영향 없음)</span>
+                </label>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm text-gray-400">@</span>
+                  <input
+                    type="text"
+                    value={form.velog.username}
+                    onChange={(e) => setForm((f) => ({ ...f, velog: { ...f.velog, username: e.target.value.replace(/^@/, '').replace(/^velog\.io\/@?/, '') } }))}
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="mocosssiii"
+                  />
+                </div>
               </div>
 
               <div>
