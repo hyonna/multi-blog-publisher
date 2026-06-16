@@ -1,0 +1,51 @@
+{
+  "name": "multi-blog-publisher",
+  "version": "1.0.0",
+  "description": "마크다운 기반 멀티 블로그 자동 발행 앱",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "author": "hyonna",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "build:mac": "npm run build && electron-builder --mac"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "electron-store": "^8.2.0",
+    "marked": "^10.0.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/marked": "^6.0.0",
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/uuid": "^9.0.7",
+    "@uiw/react-md-editor": "^3.23.5",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.0",
+    "electron-vite": "^2.0.0",
+    "postcss": "^8.4.32",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwindcss": "^3.3.6",
+    "typescript": "^5.3.0",
+    "zustand": "^4.4.7"
+  },
+  "build": {
+    "appId": "com.hyonna.multi-blog-publisher",
+    "productName": "Multi Blog Publisher",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }]
+    },
+    "files": ["out/**/*"],
+    "directories": {
+      "buildResources": "resources"
+    }
+  }
+}
