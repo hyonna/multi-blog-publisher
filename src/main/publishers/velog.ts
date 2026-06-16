@@ -30,73 +30,48 @@ function makeSlug(title: string): string {
 async function gql(
   query: string,
   variables: Record<string, unknown>,
-  headers: Record<string, string>,
-  label: string
+  headers: Record<string, string>
 ): Promise<AxiosResponse> {
   try {
     return await axios.post(ENDPOINT, { query, variables }, { headers })
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
       const body = err.response?.data
-      const detail = body ? JSON.stringify(body) : err.message
-      throw new Error(`[${label}] HTTP ${err.response?.status}: ${detail}`)
+      throw new Error(`HTTP ${err.response?.status}: ${JSON.stringify(body ?? err.message)}`)
     }
     throw err
   }
 }
 
-// ── 알려진 mutation 후보들 ─────────────────────────────────────────────────
-// Velog 스키마 변경 이력을 반영한 여러 시도
-const MUTATION_CANDIDATES = [
-  // v2 형식 (input wrapper)
-  {
-    label: 'v2/writePost-input',
-    build: (slug: string) => ({
-      query: `mutation WritePost($input: WritePostInput!) {
-        writePost(input: $input) { id url_slug user { username } }
-      }`,
-      makeVars: (post: Post) => ({
-        input: {
-          title: post.title, body: post.content, tags: post.tags,
-          is_markdown: true, is_temp: false, is_private: false, url_slug: slug,
-        },
-      }),
-      dataKey: 'writePost',
-    }),
-  },
-  // flat args 형식
-  {
-    label: 'v2/writePost-flat',
-    build: (slug: string) => ({
-      query: `mutation WritePost($title:String $body:String $tags:[String] $is_markdown:Boolean $is_temp:Boolean $is_private:Boolean $url_slug:String) {
-        writePost(title:$title body:$body tags:$tags is_markdown:$is_markdown is_temp:$is_temp is_private:$is_private url_slug:$url_slug) {
-          id url_slug user { username }
-        }
-      }`,
-      makeVars: (post: Post) => ({
-        title: post.title, body: post.content, tags: post.tags,
-        is_markdown: true, is_temp: false, is_private: false, url_slug: slug,
-      }),
-      dataKey: 'writePost',
-    }),
-  },
-  // createPost 형식
-  {
-    label: 'v2/createPost-input',
-    build: (slug: string) => ({
-      query: `mutation CreatePost($input: CreatePostInput!) {
-        createPost(input: $input) { id url_slug user { username } }
-      }`,
-      makeVars: (post: Post) => ({
-        input: {
-          title: post.title, body: post.content, tags: post.tags,
-          is_markdown: true, is_temp: false, is_private: false, url_slug: slug,
-        },
-      }),
-      dataKey: 'createPost',
-    }),
-  },
-]
+// Step 1: 초안으로 글 생성
+const WRITE_TEMP = `
+  mutation WritePost(
+    $title: String $body: String $tags: [String]
+    $is_markdown: Boolean $is_temp: Boolean
+  ) {
+    writePost(
+      title: $title body: $body tags: $tags
+      is_markdown: $is_markdown is_temp: $is_temp
+    ) {
+      id url_slug user { username }
+    }
+  }
+`
+
+// Step 2: 초안을 발행 상태로 업데이트
+const EDIT_POST = `
+  mutation EditPost(
+    $id: ID! $title: String $body: String $tags: [String]
+    $is_markdown: Boolean $is_temp: Boolean $url_slug: String
+  ) {
+    editPost(
+      id: $id title: $title body: $body tags: $tags
+      is_markdown: $is_markdown is_temp: $is_temp url_slug: $url_slug
+    ) {
+      id url_slug user { username }
+    }
+  }
+`
 
 export async function publishToVelog(
   post: Post,
@@ -105,96 +80,56 @@ export async function publishToVelog(
 ): Promise<{ id: string; url: string }> {
   const headers = makeHeaders(accessToken, refreshToken)
   const slug = makeSlug(post.title)
-  const errors: string[] = []
 
-  // 0. 인증 확인
-  try {
-    const authRes = await gql(
-      `{ currentUser { id username } }`,
-      {},
-      headers,
-      'auth-check'
+  // Step 1: 임시 초안 생성
+  const writeRes = await gql(
+    WRITE_TEMP,
+    {
+      title: post.title,
+      body: post.content,
+      tags: post.tags,
+      is_markdown: true,
+      is_temp: true,
+    },
+    headers
+  )
+
+  if (writeRes.data.errors?.length) {
+    throw new Error(`초안 생성 실패: ${writeRes.data.errors[0].message}`)
+  }
+
+  const draft = writeRes.data.data?.writePost
+  if (!draft) {
+    // access_token 만료 가능성 안내
+    throw new Error(
+      '초안 생성 응답이 null입니다.\n' +
+      'access_token이 만료(24시간)됐을 수 있습니다.\n' +
+      'velog.io DevTools에서 access_token을 다시 복사해 설정에 붙여넣어 주세요.'
     )
-    const me = authRes.data.data?.currentUser
-    if (!me) {
-      throw new Error(
-        'access_token이 만료됐거나 유효하지 않습니다.\n설정에서 velog.io 쿠키를 다시 복사해 주세요.'
-      )
-    }
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e)
-    // currentUser 쿼리 자체가 없는 경우(400)는 무시하고 발행 시도
-    if (!msg.includes('HTTP 400')) throw e
   }
 
-  // 1. 인트로스펙션으로 실제 스키마 파악 시도
-  try {
-    const introRes = await gql(
-      `{ __schema { mutationType { fields { name args { name type { name ofType { name } } } } } } }`,
-      {},
-      headers,
-      'introspection'
-    )
+  // Step 2: 초안을 발행
+  const editRes = await gql(
+    EDIT_POST,
+    {
+      id: draft.id,
+      title: post.title,
+      body: post.content,
+      tags: post.tags,
+      is_markdown: true,
+      is_temp: false,
+      url_slug: slug,
+    },
+    headers
+  )
 
-    const fields: Array<{
-      name: string
-      args: Array<{ name: string; type: { name: string | null; ofType: { name: string } | null } }>
-    }> = introRes.data.data?.__schema?.mutationType?.fields ?? []
-
-    const candidates = ['writePost', 'createPost', 'write_post', 'create_post']
-    const mutation = fields.find(f => candidates.includes(f.name))
-
-    if (mutation) {
-      const inputArg = mutation.args.find(a => a.name === 'input')
-      const inputTypeName = inputArg?.type.name ?? inputArg?.type.ofType?.name ?? null
-
-      const queryStr = inputTypeName
-        ? `mutation P($input: ${inputTypeName}!) {
-            ${mutation.name}(input: $input) { id url_slug user { username } }
-          }`
-        : `mutation P($title:String $body:String $tags:[String] $is_markdown:Boolean $is_temp:Boolean $is_private:Boolean $url_slug:String) {
-            ${mutation.name}(title:$title body:$body tags:$tags is_markdown:$is_markdown is_temp:$is_temp is_private:$is_private url_slug:$url_slug) {
-              id url_slug user { username }
-            }
-          }`
-
-      const variables = inputTypeName
-        ? { input: { title: post.title, body: post.content, tags: post.tags, is_markdown: true, is_temp: false, is_private: false, url_slug: slug } }
-        : { title: post.title, body: post.content, tags: post.tags, is_markdown: true, is_temp: false, is_private: false, url_slug: slug }
-
-      const res = await gql(queryStr, variables, headers, `introspected/${mutation.name}`)
-      if (!res.data.errors?.length) {
-        const wp = res.data.data?.[mutation.name]
-        if (wp) return { id: wp.id, url: `https://velog.io/@${wp.user.username}/${wp.url_slug}` }
-      }
-      errors.push(`introspected: ${res.data.errors?.[0]?.message ?? '데이터 없음'}`)
-    } else {
-      errors.push(`introspection: 글쓰기 mutation 없음 (available: ${fields.map(f => f.name).join(', ')})`)
-    }
-  } catch (e: unknown) {
-    errors.push(e instanceof Error ? e.message : String(e))
+  if (editRes.data.errors?.length) {
+    throw new Error(`발행 실패: ${editRes.data.errors[0].message}`)
   }
 
-  // 2. 알려진 mutation 형식들 순차 시도
-  for (const candidate of MUTATION_CANDIDATES) {
-    try {
-      const { query, makeVars, dataKey } = candidate.build(slug)
-      const res = await gql(query, makeVars(post), headers, candidate.label)
-
-      if (res.data.errors?.length) {
-        errors.push(`${candidate.label}: ${res.data.errors[0].message}`)
-        continue
-      }
-
-      const wp = res.data.data?.[dataKey]
-      if (wp) {
-        return { id: wp.id, url: `https://velog.io/@${wp.user.username}/${wp.url_slug}` }
-      }
-      errors.push(`${candidate.label}: 응답 데이터 없음 (raw: ${JSON.stringify(res.data)})`)
-    } catch (e: unknown) {
-      errors.push(e instanceof Error ? e.message : String(e))
-    }
+  const published = editRes.data.data?.editPost ?? draft
+  return {
+    id: published.id,
+    url: `https://velog.io/@${published.user.username}/${published.url_slug}`,
   }
-
-  throw new Error(`Velog 발행 실패:\n${errors.join('\n')}`)
 }
