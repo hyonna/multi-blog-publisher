@@ -10,13 +10,12 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
   const { settings, setSettings } = useStore()
   const [form, setForm] = useState<Settings>(
     settings ?? {
-      tistory: { appId: '', appSecret: '', accessToken: '', blogName: '' },
+      tistory: { blogName: '', cookies: '' },
       velog: { accessToken: '', username: '' }
     }
   )
   const [activeTab, setActiveTab] = useState<'tistory' | 'velog'>('tistory')
   const [tistoryStatus, setTistoryStatus] = useState<string>('')
-  const [blogs, setBlogs] = useState<{ name: string; title: string }[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
 
@@ -24,29 +23,28 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
     if (settings) setForm(settings)
   }, [settings])
 
-  async function handleTistoryAuth(): Promise<void> {
-    if (!form.tistory.appId || !form.tistory.appSecret) {
-      setTistoryStatus('App ID와 App Secret을 먼저 입력해주세요.')
-      return
-    }
-    setTistoryStatus('인증 창이 열렸습니다...')
+  const isTistoryLoggedIn = !!form.tistory.cookies
+
+  async function handleTistoryLogin(): Promise<void> {
+    setTistoryStatus('로그인 창을 열고 있습니다...')
     try {
-      const token = await window.electron.tistory.auth(form.tistory.appId, form.tistory.appSecret)
-      const blogList = await window.electron.tistory.getBlogs(token)
-      setBlogs(blogList)
+      const { blogName, cookies } = await window.electron.tistory.login()
       setForm((f) => ({
         ...f,
         tistory: {
-          ...f.tistory,
-          accessToken: token,
-          blogName: blogList[0]?.name ?? ''
+          blogName: blogName || f.tistory.blogName,
+          cookies
         }
       }))
-      setTistoryStatus('인증 성공!')
+      setTistoryStatus('로그인 성공! 저장 버튼을 눌러 완료하세요.')
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setTistoryStatus(`오류: ${msg}`)
+      setTistoryStatus(`오류: ${err instanceof Error ? err.message : String(err)}`)
     }
+  }
+
+  function handleTistoryLogout(): void {
+    setForm((f) => ({ ...f, tistory: { blogName: '', cookies: '' } }))
+    setTistoryStatus('')
   }
 
   async function handleSave(): Promise<void> {
@@ -94,58 +92,69 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
         <div className="p-5 space-y-4">
           {activeTab === 'tistory' && (
             <>
-              <p className="text-xs text-gray-500 bg-orange-50 border border-orange-100 rounded-lg p-3">
-                <strong>설정 방법:</strong> tistory.com/guide/api/manage/register 에서 앱을 등록하고
-                App ID와 Secret Key를 입력한 후 OAuth 인증을 진행하세요.
-              </p>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">App ID</label>
-                <input
-                  type="text"
-                  value={form.tistory.appId}
-                  onChange={(e) => setForm((f) => ({ ...f, tistory: { ...f.tistory, appId: e.target.value } }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Tistory App ID"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">App Secret Key</label>
-                <input
-                  type="password"
-                  value={form.tistory.appSecret}
-                  onChange={(e) => setForm((f) => ({ ...f, tistory: { ...f.tistory, appSecret: e.target.value } }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Secret Key"
-                />
-              </div>
-
-              <button
-                onClick={handleTistoryAuth}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium py-2 rounded-lg transition-colors"
-              >
-                OAuth 인증하기
-              </button>
+              {isTistoryLoggedIn ? (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-green-800">로그인됨</p>
+                    {form.tistory.blogName && (
+                      <p className="text-xs text-green-600 mt-0.5">
+                        {form.tistory.blogName}.tistory.com
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleTistoryLogout}
+                    className="text-xs text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 space-y-3">
+                  <p className="text-xs text-gray-600">
+                    티스토리 Open API가 종료되어 브라우저 자동화 방식으로 글을 발행합니다.
+                    아래 버튼을 눌러 티스토리에 로그인하세요.
+                  </p>
+                  <button
+                    onClick={handleTistoryLogin}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                    </svg>
+                    티스토리 로그인
+                  </button>
+                </div>
+              )}
 
               {tistoryStatus && (
-                <p className={`text-xs px-3 py-2 rounded-lg ${tistoryStatus.startsWith('오류') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                <p className={`text-xs px-3 py-2 rounded-lg ${
+                  tistoryStatus.startsWith('오류')
+                    ? 'bg-red-50 text-red-600 border border-red-100'
+                    : 'bg-blue-50 text-blue-600 border border-blue-100'
+                }`}>
                   {tistoryStatus}
                 </p>
               )}
 
-              {form.tistory.accessToken && (
+              {isTistoryLoggedIn && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">블로그 선택</label>
-                  <select
-                    value={form.tistory.blogName}
-                    onChange={(e) => setForm((f) => ({ ...f, tistory: { ...f.tistory, blogName: e.target.value } }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    {blogs.map((b) => (
-                      <option key={b.name} value={b.name}>{b.title} ({b.name})</option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">블로그 이름</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={form.tistory.blogName}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, tistory: { ...f.tistory, blogName: e.target.value } }))
+                      }
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="myblog (myblog.tistory.com)"
+                    />
+                    <span className="text-sm text-gray-400 flex-shrink-0">.tistory.com</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    글쓰기 창이 열리면 내용을 확인 후 직접 발행 버튼을 눌러주세요.
+                  </p>
                 </div>
               )}
             </>

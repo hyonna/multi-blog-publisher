@@ -13,8 +13,6 @@ contextBridge.exposeInMainWorld('electron', {
     save: (settings: unknown) => ipcRenderer.invoke('settings:save', settings)
   },
   tistory: {
-    auth: (appId: string, appSecret: string) =>
-      ipcRenderer.invoke('tistory:auth', appId, appSecret),
-    getBlogs: (accessToken: string) => ipcRenderer.invoke('tistory:getBlogs', accessToken)
+    login: () => ipcRenderer.invoke('tistory:login')
   }
 })

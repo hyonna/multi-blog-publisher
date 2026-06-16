@@ -15,10 +15,8 @@ export interface Post {
 
 export interface Settings {
   tistory: {
-    appId: string
-    appSecret: string
-    accessToken: string
     blogName: string
+    cookies: string   // JSON stringified Cookie[]
   }
   velog: {
     accessToken: string
@@ -32,7 +30,7 @@ interface StoreSchema {
 }
 
 const defaultSettings: Settings = {
-  tistory: { appId: '', appSecret: '', accessToken: '', blogName: '' },
+  tistory: { blogName: '', cookies: '' },
   velog: { accessToken: '', username: '' }
 }
 

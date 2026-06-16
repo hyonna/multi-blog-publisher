@@ -13,10 +13,8 @@ export interface Post {
 
 export interface Settings {
   tistory: {
-    appId: string
-    appSecret: string
-    accessToken: string
     blogName: string
+    cookies: string
   }
   velog: {
     accessToken: string
@@ -43,8 +41,7 @@ declare global {
         save: (settings: Settings) => Promise<void>
       }
       tistory: {
-        auth: (appId: string, appSecret: string) => Promise<string>
-        getBlogs: (accessToken: string) => Promise<{ name: string; title: string }[]>
+        login: () => Promise<{ blogName: string; cookies: string }>
       }
     }
   }

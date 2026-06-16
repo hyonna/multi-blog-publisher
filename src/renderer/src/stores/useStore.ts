@@ -18,7 +18,7 @@ interface AppState {
 }
 
 const defaultSettings: Settings = {
-  tistory: { appId: '', appSecret: '', accessToken: '', blogName: '' },
+  tistory: { blogName: '', cookies: '' },
   velog: { accessToken: '', username: '' }
 }
 

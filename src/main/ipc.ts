@@ -8,7 +8,7 @@ import {
   saveSettings,
   Post
 } from './store'
-import { getTistoryAccessToken, getTistoryBlogs, publishToTistory } from './publishers/tistory'
+import { loginToTistory, publishToTistory } from './publishers/tistory'
 import { publishToVelog } from './publishers/velog'
 
 export function setupIPC(): void {
@@ -50,16 +50,15 @@ export function setupIPC(): void {
 
       if (platforms.includes('tistory')) {
         try {
-          const { postId, url } = await publishToTistory(
+          const { url } = await publishToTistory(
             post,
-            settings.tistory.accessToken,
-            settings.tistory.blogName
+            settings.tistory.blogName,
+            settings.tistory.cookies
           )
-          post.publishedTo.tistory = { postId, url, publishedAt: new Date().toISOString() }
+          post.publishedTo.tistory = { postId: '', url, publishedAt: new Date().toISOString() }
           results.tistory = { success: true, url }
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err)
-          results.tistory = { success: false, error: msg }
+          results.tistory = { success: false, error: err instanceof Error ? err.message : String(err) }
         }
       }
 
@@ -69,8 +68,7 @@ export function setupIPC(): void {
           post.publishedTo.velog = { id: velogId, url, publishedAt: new Date().toISOString() }
           results.velog = { success: true, url }
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err)
-          results.velog = { success: false, error: msg }
+          results.velog = { success: false, error: err instanceof Error ? err.message : String(err) }
         }
       }
 
@@ -85,12 +83,7 @@ export function setupIPC(): void {
     saveSettings(settings)
   })
 
-  ipcMain.handle('tistory:auth', async (_e, appId: string, appSecret: string) => {
-    const accessToken = await getTistoryAccessToken(appId, appSecret)
-    return accessToken
-  })
-
-  ipcMain.handle('tistory:getBlogs', async (_e, accessToken: string) => {
-    return await getTistoryBlogs(accessToken)
+  ipcMain.handle('tistory:login', async () => {
+    return await loginToTistory()
   })
 }

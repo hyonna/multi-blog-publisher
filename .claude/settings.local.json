@@ -15,7 +15,17 @@
       "Bash(pnpm --version)",
       "Bash(pnpm install *)",
       "Bash(pnpm approve-builds *)",
-      "Bash(pnpm build *)"
+      "Bash(pnpm build *)",
+      "Bash(node -e \"require\\('playwright-core'\\)\")",
+      "Bash(pnpm add *)",
+      "Bash(xargs cat)",
+      "Bash(node *)",
+      "Bash(tmux new-session *)",
+      "Bash(tmux kill-session *)",
+      "Bash(brew install *)",
+      "Bash(tmux send-keys *)",
+      "Bash(tmux capture-pane *)",
+      "Bash(pnpm dev *)"
     ]
   }
 }

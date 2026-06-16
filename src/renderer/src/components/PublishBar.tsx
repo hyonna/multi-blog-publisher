@@ -25,7 +25,7 @@ export function PublishBar({
   const [tagInput, setTagInput] = useState('')
   const [publishResult, setPublishResult] = useState<Record<string, { success: boolean; url?: string; error?: string }> | null>(null)
 
-  const hasTistory = !!settings?.tistory.accessToken
+  const hasTistory = !!settings?.tistory.cookies
   const hasVelog = !!settings?.velog.accessToken
 
   function togglePlatform(p: string): void {
