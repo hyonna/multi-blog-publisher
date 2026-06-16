@@ -20,6 +20,7 @@ export interface Settings {
   }
   velog: {
     accessToken: string
+    refreshToken: string
     username: string
   }
 }
@@ -31,7 +32,7 @@ interface StoreSchema {
 
 const defaultSettings: Settings = {
   tistory: { blogName: '', cookies: '' },
-  velog: { accessToken: '', username: '' }
+  velog: { accessToken: '', refreshToken: '', username: '' }
 }
 
 export const store = new Store<StoreSchema>({

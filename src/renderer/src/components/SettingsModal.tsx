@@ -166,7 +166,7 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
                 <strong>토큰 가져오는 방법:</strong><br />
                 1. velog.io에 로그인<br />
                 2. 개발자 도구(F12) → Application → Cookies → velog.io<br />
-                3. <code className="bg-teal-100 px-1 rounded">access_token</code> 값을 복사해서 붙여넣기
+                3. <code className="bg-teal-100 px-1 rounded">access_token</code>과 <code className="bg-teal-100 px-1 rounded">refresh_token</code> 값을 각각 복사
               </p>
 
               <div>
@@ -181,13 +181,30 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Access Token</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  access_token
+                  <span className="text-xs font-normal text-gray-400 ml-1">(24시간마다 갱신 필요)</span>
+                </label>
                 <textarea
                   value={form.velog.accessToken}
-                  onChange={(e) => setForm((f) => ({ ...f, velog: { ...f.velog, accessToken: e.target.value } }))}
+                  onChange={(e) => setForm((f) => ({ ...f, velog: { ...f.velog, accessToken: e.target.value.trim() } }))}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-xs"
-                  rows={3}
-                  placeholder="user_access_token 값 붙여넣기"
+                  rows={2}
+                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  refresh_token
+                  <span className="text-xs font-normal text-gray-400 ml-1">(30일 유효)</span>
+                </label>
+                <textarea
+                  value={form.velog.refreshToken}
+                  onChange={(e) => setForm((f) => ({ ...f, velog: { ...f.velog, refreshToken: e.target.value.trim() } }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-xs"
+                  rows={2}
+                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 />
               </div>
             </>

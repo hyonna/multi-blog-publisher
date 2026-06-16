@@ -25,7 +25,8 @@
       "Bash(brew install *)",
       "Bash(tmux send-keys *)",
       "Bash(tmux capture-pane *)",
-      "Bash(pnpm dev *)"
+      "Bash(pnpm dev *)",
+      "Bash(pkill -f \"Electron\")"
     ]
   }
 }

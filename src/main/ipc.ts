@@ -64,7 +64,7 @@ export function setupIPC(): void {
 
       if (platforms.includes('velog')) {
         try {
-          const { id: velogId, url } = await publishToVelog(post, settings.velog.accessToken)
+          const { id: velogId, url } = await publishToVelog(post, settings.velog.accessToken, settings.velog.refreshToken)
           post.publishedTo.velog = { id: velogId, url, publishedAt: new Date().toISOString() }
           results.velog = { success: true, url }
         } catch (err: unknown) {

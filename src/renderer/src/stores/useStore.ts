@@ -19,7 +19,7 @@ interface AppState {
 
 const defaultSettings: Settings = {
   tistory: { blogName: '', cookies: '' },
-  velog: { accessToken: '', username: '' }
+  velog: { accessToken: '', refreshToken: '', username: '' }
 }
 
 export const useStore = create<AppState>((set) => ({

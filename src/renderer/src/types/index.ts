@@ -18,6 +18,7 @@ export interface Settings {
   }
   velog: {
     accessToken: string
+    refreshToken: string
     username: string
   }
 }
