@@ -182,10 +182,28 @@ export async function publishToTistory(
           if (htmlArea) {
             htmlArea.value = ${JSON.stringify(html)}
             htmlArea.dispatchEvent(new Event('input', { bubbles: true }))
-            return 'html'
           }
 
-          return 'unknown'
+          // 태그 입력
+          await new Promise(r => setTimeout(r, 400))
+          const tags = ${JSON.stringify(post.tags)}
+          if (tags.length > 0) {
+            const tagInput = document.querySelector(
+              '#tag, input[id*="tag"], input[placeholder*="태그"], .tag-input input, [name="tag"]'
+            )
+            if (tagInput) {
+              for (const tag of tags) {
+                tagInput.focus()
+                tagInput.value = tag
+                tagInput.dispatchEvent(new Event('input', { bubbles: true }))
+                tagInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, keyCode: 13 }))
+                tagInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true, keyCode: 13 }))
+                await new Promise(r => setTimeout(r, 300))
+              }
+            }
+          }
+
+          return 'done'
         })()
       `).catch(console.error)
     })
