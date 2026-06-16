@@ -5,11 +5,16 @@
   "type": "module",
   "main": "./out/main/index.js",
   "author": "hyonna",
+  "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=8"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
-    "build:mac": "npm run build && electron-builder --mac"
+    "build:mac": "pnpm build && electron-builder --mac"
   },
   "dependencies": {
     "axios": "^1.6.2",
@@ -35,6 +40,9 @@
     "tailwindcss": "^3.3.6",
     "typescript": "^5.3.0",
     "zustand": "^4.4.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron", "esbuild"]
   },
   "build": {
     "appId": "com.hyonna.multi-blog-publisher",
