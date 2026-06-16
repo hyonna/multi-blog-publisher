@@ -46,7 +46,7 @@ export default function App(): React.ReactElement {
         currentPostRef.current = first
       }
     }
-    init()
+    init().catch(console.error)
   }, [])
 
   useEffect(() => {

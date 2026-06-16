@@ -18,6 +18,7 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
   const [tistoryStatus, setTistoryStatus] = useState<string>('')
   const [blogs, setBlogs] = useState<{ name: string; title: string }[]>([])
   const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
     if (settings) setForm(settings)
@@ -49,11 +50,14 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
   }
 
   async function handleSave(): Promise<void> {
+    setSaveError('')
     setIsSaving(true)
     try {
       await window.electron.settings.save(form)
       setSettings(form)
       onClose()
+    } catch (err: unknown) {
+      setSaveError(err instanceof Error ? err.message : String(err))
     } finally {
       setIsSaving(false)
     }
@@ -180,6 +184,12 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
             </>
           )}
         </div>
+
+        {saveError && (
+          <div className="mx-5 mb-1 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            저장 실패: {saveError}
+          </div>
+        )}
 
         <div className="flex gap-3 p-5 border-t border-gray-100">
           <button
