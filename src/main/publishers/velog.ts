@@ -11,6 +11,8 @@ function makeHeaders(accessToken: string, refreshToken: string) {
     Cookie: cookies.join('; '),
     Origin: 'https://velog.io',
     Referer: 'https://velog.io/',
+    'User-Agent':
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
   }
 }
 
@@ -105,6 +107,26 @@ export async function publishToVelog(
   const slug = makeSlug(post.title)
   const errors: string[] = []
 
+  // 0. 인증 확인
+  try {
+    const authRes = await gql(
+      `{ currentUser { id username } }`,
+      {},
+      headers,
+      'auth-check'
+    )
+    const me = authRes.data.data?.currentUser
+    if (!me) {
+      throw new Error(
+        'access_token이 만료됐거나 유효하지 않습니다.\n설정에서 velog.io 쿠키를 다시 복사해 주세요.'
+      )
+    }
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    // currentUser 쿼리 자체가 없는 경우(400)는 무시하고 발행 시도
+    if (!msg.includes('HTTP 400')) throw e
+  }
+
   // 1. 인트로스펙션으로 실제 스키마 파악 시도
   try {
     const introRes = await gql(
@@ -168,7 +190,7 @@ export async function publishToVelog(
       if (wp) {
         return { id: wp.id, url: `https://velog.io/@${wp.user.username}/${wp.url_slug}` }
       }
-      errors.push(`${candidate.label}: 응답 데이터 없음`)
+      errors.push(`${candidate.label}: 응답 데이터 없음 (raw: ${JSON.stringify(res.data)})`)
     } catch (e: unknown) {
       errors.push(e instanceof Error ? e.message : String(e))
     }
