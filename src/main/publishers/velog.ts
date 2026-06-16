@@ -29,9 +29,7 @@ function makeSlug(title: string): string {
 function makeHeaders(accessToken: string) {
   return {
     'Content-Type': 'application/json',
-    // Velog는 user_access_token 쿠키를 사용
-    Cookie: `user_access_token=${accessToken}`,
-    // Bearer 방식도 함께 전달 (v3 대응)
+    Cookie: `access_token=${accessToken}`,
     Authorization: `Bearer ${accessToken}`,
     Origin: 'https://velog.io',
     Referer: 'https://velog.io/',

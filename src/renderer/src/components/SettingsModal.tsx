@@ -166,7 +166,7 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
                 <strong>토큰 가져오는 방법:</strong><br />
                 1. velog.io에 로그인<br />
                 2. 개발자 도구(F12) → Application → Cookies → velog.io<br />
-                3. <code className="bg-teal-100 px-1 rounded">user_access_token</code> 값을 복사해서 붙여넣기
+                3. <code className="bg-teal-100 px-1 rounded">access_token</code> 값을 복사해서 붙여넣기
               </p>
 
               <div>
